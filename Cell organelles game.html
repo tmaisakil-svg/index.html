@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cell-O-Rama: Middle School Cell Organelles Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Fredoka', 'sans-serif'],
+                    },
+                    colors: {
+                        cellGreen: '#10B981',
+                        cellBlue: '#3B82F6',
+                        cellPurple: '#8B5CF6',
+                        cellYellow: '#F59E0B',
+                        cellPink: '#EC4899',
+                        darkNavy: '#0F172A',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1120;
+            color: #f8fafc;
+            user-select: none;
+        }
+        .font-display {
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+        /* Custom Organelle Animation Effects */
+        .pulse-organelle {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 8px rgba(59,130,246,0.8)); }
+        }
+        .organelle-hover:hover {
+            cursor: pointer;
+            filter: brightness(1.25) drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+            transition: all 0.2s ease-in-out;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-border {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-cellBlue selection:text-white">
+
+    <!-- TOP NAVBAR & SCOREBOARD -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-700/60 px-4 py-3 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-2xl shadow-md">
+                    🔬
+                </div>
+                <div>
+                    <h1 class="font-display text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                        CELL-O-RAMA
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium hidden sm:block">Grade 7 Organelles & Cell Biology Lab</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center space-x-4 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700 text-sm">
+                <div class="flex items-center space-x-1" title="Total XP Points">
+                    <span class="text-amber-400">⚡</span>
+                    <span id="stat-xp" class="font-bold text-amber-300">0</span>
+                    <span class="text-xs text-slate-400">XP</span>
+                </div>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <div class="flex items-center space-x-1" title="Badges Unlocked">
+                    <span class="text-purple-400">🏆</span>
+                    <span id="stat-badges" class="font-bold text-purple-300">0/5</span>
+                </div>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <button id="btn-sound" onclick="toggleSound()" class="text-slate-300 hover:text-white transition-colors text-lg" title="Toggle Sound Effects">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-grow flex flex-col">
+        
+        <!-- Navigation Tabs -->
+        <nav class="flex flex-wrap gap-2 mb-6 justify-center sm:justify-start">
+            <button onclick="switchTab('explorer')" id="tab-btn-explorer" class="tab-btn active px-4 py-2.5 rounded-xl font-display text-sm sm:text-base font-semibold flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-900/40">
+                🔍 Cell Explorer
+            </button>
+            <button onclick="switchTab('builder')" id="tab-btn-builder" class="tab-btn px-4 py-2.5 rounded-xl font-display text-sm sm:text-base font-semibold flex items-center gap-2 transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white">
+                🏗️ Build-A-Cell
+            </button>
+            <button onclick="switchTab('rush')" id="tab-btn-rush" class="tab-btn px-4 py-2.5 rounded-xl font-display text-sm sm:text-base font-semibold flex items-center gap-2 transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white">
+                ⚡ Organelle Rush
+            </button>
+            <button onclick="switchTab('quiz')" id="tab-btn-quiz" class="tab-btn px-4 py-2.5 rounded-xl font-display text-sm sm:text-base font-semibold flex items-center gap-2 transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white">
+                🧩 Bio Detective
+            </button>
+        </nav>
+
+        <!-- TAB 1: INTERACTIVE CELL EXPLORER -->
+        <section id="tab-explorer" class="tab-content flex-grow flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 glass-panel p-4 rounded-2xl">
+                <div>
+                    <h2 class="font-display text-xl font-bold text-emerald-300 flex items-center gap-2">
+                        Interactive Organelle Viewer
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">Click any organelle inside the cell to inspect its function, real-world city analogy, and key facts!</p>
+                </div>
+                
+                <!-- Plant vs Animal Cell Toggle Switch -->
+                <div class="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 text-sm">
+                    <button id="toggle-plant" onclick="setCellType('plant')" class="px-4 py-1.5 rounded-lg font-semibold transition-all bg-emerald-500 text-slate-950 font-display">
+                        🌿 Plant Cell
+                    </button>
+                    <button id="toggle-animal" onclick="setCellType('animal')" class="px-4 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white font-display">
+                        🦁 Animal Cell
+                    </button>
+                </div>
+            </div>
+
+            <!-- Explorer Main Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow items-start">
+                
+                <!-- SVG CELL INTERACTIVE CANVAS -->
+                <div class="lg:col-span-7 glass-panel p-4 rounded-2xl flex flex-col items-center justify-center relative min-h-[360px] sm:min-h-[460px]">
+                    
+                    <div id="cell-badge-indicator" class="absolute top-4 left-4 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs px-3 py-1 rounded-full font-semibold font-display flex items-center gap-1">
+                        <span id="cell-type-icon">🌿</span> <span id="cell-type-label">Plant Cell View</span>
+                    </div>
+
+                    <button onclick="resetExplorerSelection()" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                        🔄 Reset View
+                    </button>
+
+                    <!-- Interactive Cell SVG Container -->
+                    <div class="w-full max-w-[480px] aspect-square relative flex items-center justify-center my-auto">
+                        <svg id="cell-svg" viewBox="0 0 500 500" class="w-full h-full drop-shadow-2xl">
+                            <!-- SVG Content generated dynamically by JS -->
+                        </svg>
+                    </div>
+
+                    <p class="text-xs text-slate-400 mt-2 text-center animate-pulse">
+                        💡 Hover or tap organelles on the diagram to discover their roles!
+                    </p>
+                </div>
+
+                <!-- ORGANELLE INFO DISPLAY PANEL -->
+                <div class="lg:col-span-5 glass-panel p-5 rounded-2xl flex flex-col justify-between h-full min-h-[400px]">
+                    <div id="organelle-detail-box">
+                        <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                            <div class="flex items-center space-x-3">
+                                <span id="info-icon" class="text-3xl p-2 rounded-xl bg-slate-800 border border-slate-700">🔬</span>
+                                <div>
+                                    <h3 id="info-title" class="font-display text-2xl font-bold text-white">Click an Organelle</h3>
+                                    <span id="info-nickname" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        Cell Discovery Mode
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="info-body" class="space-y-4">
+                            <div class="p-3.5 bg-slate-800/60 rounded-xl border border-slate-700/50">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1">
+                                    🏢 City Analogy
+                                </h4>
+                                <p id="info-analogy" class="text-sm text-slate-200">
+                                    Select any part of the cell on the left diagram to learn its real-world analogy (like a power plant or town hall!).
+                                </p>
+                            </div>
+
+                            <div class="p-3.5 bg-slate-800/60 rounded-xl border border-slate-700/50">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-blue-400 mb-1 flex items-center gap-1">
+                                    ⚡ Main Function (Grade 7 Key Concept)
+                                </h4>
+                                <p id="info-function" class="text-sm text-slate-200">
+                                    Cells are full of specialized micro-structures called organelles that work together to keep the cell alive and healthy.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div class="p-2.5 bg-slate-900/60 rounded-lg border border-slate-800">
+                                    <span class="text-slate-400 block mb-1">Found In Plant Cells?</span>
+                                    <span id="info-in-plant" class="font-bold text-emerald-400">Yes ✅</span>
+                                </div>
+                                <div class="p-2.5 bg-slate-900/60 rounded-lg border border-slate-800">
+                                    <span class="text-slate-400 block mb-1">Found In Animal Cells?</span>
+                                    <span id="info-in-animal" class="font-bold text-blue-400">Yes ✅</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Quiz Challenge Button inside Explorer -->
+                    <div id="info-footer" class="mt-6 pt-3 border-t border-slate-700/60">
+                        <button id="btn-quick-check" onclick="startQuickCheck()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-display font-semibold text-sm transition flex items-center justify-center gap-2 shadow-lg">
+                            🧪 Test Yourself on This Organelle (+10 XP)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: BUILD-A-CELL LAB -->
+        <section id="tab-builder" class="tab-content hidden flex-grow flex flex-col">
+            <div class="glass-panel p-4 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="font-display text-xl font-bold text-cyan-300 flex items-center gap-2">
+                        🏗️ Cell Assembly Workshop
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">Drag & drop or tap organelles into the cell boundary to construct a fully living cell!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="builder-target-select" onchange="initCellBuilder()" class="bg-slate-900 border border-slate-700 text-white text-sm font-display rounded-xl px-3 py-2">
+                        <option value="plant">Target: 🌿 Plant Cell</option>
+                        <option value="animal">Target: 🦁 Animal Cell</option>
+                    </select>
+                    <button onclick="initCellBuilder()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700">
+                        Clear / Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+                <!-- Organelle Tray -->
+                <div class="lg:col-span-4 glass-panel p-4 rounded-2xl flex flex-col">
+                    <h3 class="font-display font-bold text-slate-200 text-base mb-3 flex items-center justify-between">
+                        <span>📦 Organelle Supply Tray</span>
+                        <span id="builder-count" class="text-xs text-amber-400 font-mono">Placed: 0/0</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-3">Click an organelle to place it in the workspace below:</p>
+                    
+                    <div id="organelle-tray" class="grid grid-cols-2 gap-2.5 overflow-y-auto max-h-[380px] p-1">
+                        <!-- Tray items generated via JS -->
+                    </div>
+                </div>
+
+                <!-- Cell Drop Zone Workspace -->
+                <div class="lg:col-span-8 glass-panel p-5 rounded-2xl flex flex-col items-center justify-between relative min-h-[400px]">
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-slate-900 rounded-full h-3 mb-4 p-0.5 border border-slate-800 overflow-hidden">
+                        <div id="builder-progress-bar" class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Interactive Cell Assembly Canvas Boundary -->
+                    <div id="builder-canvas" class="w-full max-w-[420px] aspect-square relative rounded-full border-4 border-dashed border-emerald-500/50 bg-slate-900/60 flex items-center justify-center p-6 my-2 shadow-inner transition-all">
+                        <span id="builder-placeholder-text" class="text-slate-500 font-display text-sm text-center px-4">
+                            Click or drag organelles from the tray to build your <span id="builder-type-name" class="text-emerald-400 font-bold">Plant Cell</span>!
+                        </span>
+                        <!-- Dynamically placed organelles appear inside here -->
+                    </div>
+
+                    <!-- Builder Feedback Alert -->
+                    <div id="builder-feedback" class="w-full text-center text-xs sm:text-sm py-2 px-4 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300">
+                        🎯 Select organelles required for this specific cell type!
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: ORGANELLE RUSH GAME -->
+        <section id="tab-rush" class="tab-content hidden flex-grow flex flex-col">
+            <div class="glass-panel p-5 rounded-2xl mb-4 text-center max-w-2xl mx-auto w-full">
+                <h2 class="font-display text-2xl font-bold text-amber-400 mb-1">
+                    ⚡ Organelle Function Rush!
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-300 mb-4">
+                    Match organelle nicknames & job functions as fast as you can before time runs out!
+                </p>
+
+                <!-- Rush HUD -->
+                <div id="rush-hud" class="hidden flex justify-around items-center bg-slate-900/80 p-3 rounded-xl border border-slate-700 mb-4 font-display">
+                    <div>
+                        <span class="text-xs text-slate-400 block">TIME</span>
+                        <span id="rush-timer" class="text-2xl font-bold text-amber-400">30s</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block">SCORE</span>
+                        <span id="rush-score" class="text-2xl font-bold text-emerald-400">0</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block">STREAK</span>
+                        <span id="rush-streak" class="text-2xl font-bold text-cyan-400">0x</span>
+                    </div>
+                </div>
+
+                <!-- Start Rush Button -->
+                <div id="rush-start-screen" class="py-6">
+                    <button onclick="startRushGame()" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-display font-bold text-lg rounded-2xl shadow-xl transition transform active:scale-95">
+                        🚀 START SPEED MATCH (30s)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rush Game Area -->
+            <div id="rush-game-area" class="hidden max-w-2xl mx-auto w-full glass-panel p-6 rounded-2xl space-y-6 flex-grow flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-amber-400 uppercase tracking-widest block text-center mb-2">
+                        Target Function / Nickname:
+                    </span>
+                    <div id="rush-prompt-card" class="bg-slate-800 p-5 rounded-2xl border-2 border-amber-500/50 text-center shadow-lg">
+                        <h3 id="rush-prompt-text" class="font-display text-xl sm:text-2xl font-bold text-white">
+                            "The Powerhouse of the Cell"
+                        </h3>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-400 text-center">Select the matching organelle below:</p>
+
+                <!-- Options grid -->
+                <div id="rush-options-grid" class="grid grid-cols-2 gap-3">
+                    <!-- Dynamic option buttons -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: BIO DETECTIVE QUIZ -->
+        <section id="tab-quiz" class="tab-content hidden flex-grow flex flex-col">
+            <div class="glass-panel p-5 rounded-2xl mb-4 max-w-3xl mx-auto w-full">
+                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                    <div>
+                        <h2 class="font-display text-xl sm:text-2xl font-bold text-purple-300">
+                            🧩 Bio Detective: Cell Mystery Cases
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-300">Apply your cell knowledge to solve real cellular emergency scenarios!</p>
+                    </div>
+                    <div class="text-right">
+                        <span id="quiz-progress-text" class="text-xs font-display text-purple-400 font-bold block">Case 1 of 5</span>
+                    </div>
+                </div>
+
+                <!-- Quiz Card -->
+                <div id="quiz-card" class="space-y-4">
+                    <div class="p-4 bg-slate-900/80 rounded-xl border border-slate-700">
+                        <div class="flex items-center gap-2 text-amber-400 text-xs font-bold font-display mb-1">
+                            <span>🚨 INCIDENT REPORT</span>
+                        </div>
+                        <p id="quiz-question" class="text-sm sm:text-base text-slate-100 font-medium">
+                            Question text goes here...
+                        </p>
+                    </div>
+
+                    <!-- Choices -->
+                    <div id="quiz-options" class="space-y-2.5">
+                        <!-- Option buttons generated by JS -->
+                    </div>
+
+                    <!-- Explanation Box -->
+                    <div id="quiz-explanation" class="hidden p-4 rounded-xl text-xs sm:text-sm bg-slate-800 border border-slate-700">
+                        <h4 id="quiz-result-title" class="font-bold mb-1 font-display">Result Title</h4>
+                        <p id="quiz-result-text" class="text-slate-300">Explanation text...</p>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="hidden px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-display font-semibold text-sm rounded-xl transition">
+                            Next Case ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACHIEVEMENTS MODAL / DRAWER -->
+        <div id="badges-drawer" class="mt-8 glass-panel p-5 rounded-2xl border border-slate-700">
+            <h3 class="font-display font-bold text-lg text-slate-200 mb-3 flex items-center gap-2">
+                🏆 Grade 7 Cell Biology Badges
+            </h3>
+            <div id="badges-grid" class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <!-- Badges dynamically populated -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="py-4 text-center text-xs text-slate-500 border-t border-slate-800/80 mt-6">
+        <p>Cell-O-Rama • Grade 7 Interactive Life Science Activity • Designed for Middle School Biology</p>
+    </footer>
+
+    <script>
+        
+        // Audio Synthesizer via Web Audio API (No external sound files required)
+        let audioCtx = null;
+        let soundMuted = false;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function toggleSound() {
+            soundMuted = !soundMuted;
+            document.getElementById('btn-sound').innerText = soundMuted ? '🔇' : '🔊';
+        }
+
+        function playSound(type) {
+            if (soundMuted) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                
+                if (type === 'click') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'success') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'error') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(180, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'win') {
+                    // Short arpeggio fanfare
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                        gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.08 + 0.2);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.2);
+                    });
+                }
+            } catch(e) {
+                console.log("Audio not allowed yet");
+            }
+        }
+
+        const ORGANELLES = {
+            nucleus: {
+                id: 'nucleus',
+                name: 'Nucleus',
+                nickname: 'The Cell Control Center / Brain',
+                analogy: '🏛️ City Hall / Mayor\'s Office: Contains all blueprints (DNA) and directs all city operations.',
+                function: 'Stores the cell\'s genetic material (DNA) and controls all cell activities, growth, and reproduction.',
+                plant: true,
+                animal: true,
+                icon: '🧠',
+                color: '#EC4899', // Pink
+                svgPath: 'circle'
+            },
+            mitochondria: {
+                id: 'mitochondria',
+                name: 'Mitochondria',
+                nickname: 'The Powerhouse of the Cell',
+                analogy: '⚡ Power Plant: Burns fuel (glucose) to supply electric power (ATP energy) to the entire city.',
+                function: 'Performs cellular respiration to convert food nutrients into ATP energy that the cell can use.',
+                plant: true,
+                animal: true,
+                icon: '⚡',
+                color: '#EF4444', // Red
+                svgPath: 'oval'
+            },
+            chloroplast: {
+                id: 'chloroplast',
+                name: 'Chloroplast',
+                nickname: 'Solar Power Food Factory',
+                analogy: '☀️ Solar Power Panels / Greenhouse: Captures sunlight to make free food (sugar) for the plant.',
+                function: 'Contains green chlorophyll pigment to conduct photosynthesis, converting sunlight, water, and CO2 into glucose.',
+                plant: true,
+                animal: false,
+                icon: '🌱',
+                color: '#10B981', // Green
+                svgPath: 'oval'
+            },
+            vacuole: {
+                id: 'vacuole',
+                name: 'Vacuole (Central)',
+                nickname: 'Storage Tank & Water Tower',
+                analogy: '🚰 City Water Tower & Storage Warehouse: Stores extra water, food, and waste products.',
+                function: 'Stores water, nutrients, and waste. In plant cells, a single large vacuole maintains turgor pressure so the plant stays upright!',
+                plant: true,
+                animal: true, // (Small in animal cells)
+                icon: '💧',
+                color: '#3B82F6', // Blue
+                svgPath: 'large-shape'
+            },
+            cellMembrane: {
+                id: 'cellMembrane',
+                name: 'Cell Membrane',
+                nickname: 'Security Checkpoint / Gatekeeper',
+                analogy: '👮 City Security Gates: Controls who enters and exits the city borders.',
+                function: 'A flexible outer barrier that controls which substances (like water, nutrients, and waste) can pass into or out of the cell.',
+                plant: true,
+                animal: true,
+                icon: '🛡️',
+                color: '#F59E0B', // Amber
+                svgPath: 'boundary'
+            },
+            cellWall: {
+                id: 'cellWall',
+                name: 'Cell Wall',
+                nickname: 'Rigid Armor Fortress Wall',
+                analogy: '🏰 High Stone Fortress Walls: Gives tough structural protection and shape to the city.',
+                function: 'A tough, rigid outer layer made of cellulose that provides strong support and protection for plant cells.',
+                plant: true,
+                animal: false,
+                icon: '🧱',
+                color: '#059669', // Dark Green
+                svgPath: 'outer-boundary'
+            },
+            ribosomes: {
+                id: 'ribosomes',
+                name: 'Ribosomes',
+                nickname: 'Protein Building Factories',
+                analogy: '🏗️ Construction Builders / 3D Printers: Assemble raw materials into needed proteins and structures.',
+                function: 'Tiny organelle dots that construct proteins using instructions sent from the DNA in the nucleus.',
+                plant: true,
+                animal: true,
+                icon: '🧩',
+                color: '#8B5CF6', // Purple
+                svgPath: 'dots'
+            },
+            endoplasmicReticulum: {
+                id: 'endoplasmicReticulum',
+                name: 'Endoplasmic Reticulum (ER)',
+                nickname: 'Cellular Highway System',
+                analogy: '🛣️️ City Highways & Tunnels: Transports materials quickly around different parts of town.',
+                function: 'A network of folded membranes that folds and transports proteins and lipids throughout the cell.',
+                plant: true,
+                animal: true,
+                icon: '🛣️',
+                color: '#F43F5E', // Rose
+                svgPath: 'folds'
+            },
+            golgiApparatus: {
+                id: 'golgiApparatus',
+                name: 'Golgi Apparatus',
+                nickname: 'The Post Office & Packaging Center',
+                analogy: '📦 Postal Service / UPS Warehouse: Packages, labels, and ships products out to their destinations.',
+                function: 'Modifies, sorts, and packages proteins and materials into vesicles for transport inside or outside the cell.',
+                plant: true,
+                animal: true,
+                icon: '📦',
+                color: '#D97706', // Gold
+                svgPath: 'stack'
+            },
+            cytoplasm: {
+                id: 'cytoplasm',
+                name: 'Cytoplasm',
+                nickname: 'Jelly Environment / City Ground',
+                analogy: '🌊 Gelatin Atmosphere / City Parks: Holds everything together and provides a medium for movement.',
+                function: 'A thick, gel-like jelly fluid filling the cell that suspends organelles and holds them in place.',
+                plant: true,
+                animal: true,
+                icon: '🧪',
+                color: '#0EA5E9', // Sky Blue
+                svgPath: 'bg'
+            },
+            lysosomes: {
+                id: 'lysosomes',
+                name: 'Lysosomes',
+                nickname: 'Trash Recyclers & Cleanup Crew',
+                analogy: '♻️ Recycling Plant & Sanitation Department: Breaks down old trash and worn-out parts.',
+                function: 'Contains digestive enzymes to break down waste, foreign invaders, and worn-out cell parts.',
+                plant: false,
+                animal: true,
+                icon: '♻️',
+                color: '#A855F7', // Violet
+                svgPath: 'small-circle'
+            }
+        };
+
+        // User State Management
+        let userState = {
+            xp: 0,
+            badges: [],
+            selectedOrganelle: 'nucleus',
+            cellType: 'plant', // 'plant' or 'animal'
+        };
+
+        // Load saved state from LocalStorage if available
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('cell_o_rama_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    userState.xp = parsed.xp || 0;
+                    userState.badges = parsed.badges || [];
+                }
+            } catch (e) {}
+            updateStatsUI();
+            renderBadges();
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('cell_o_rama_state', JSON.stringify({
+                    xp: userState.xp,
+                    badges: userState.badges
+                }));
+            } catch (e) {}
+        }
+
+        function addXP(amount) {
+            userState.xp += amount;
+            updateStatsUI();
+            saveState();
+        }
+
+        function unlockBadge(badgeId, badgeName, badgeIcon) {
+            if (!userState.badges.includes(badgeId)) {
+                userState.badges.push(badgeId);
+                saveState();
+                updateStatsUI();
+                renderBadges();
+                playSound('win');
+                confetti({
+                    particleCount: 80,
+                    spread: 60,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-xp').innerText = userState.xp;
+            document.getElementById('stat-badges').innerText = `${userState.badges.length}/5`;
+        }
+
+        const BADGES_DEF = [
+            { id: 'explorer', name: 'Cell Explorer', icon: '🔍', desc: 'Inspected organelles in Explorer mode' },
+            { id: 'plant_master', name: 'Plant Architect', icon: '🌿', desc: 'Successfully constructed a Plant Cell' },
+            { id: 'animal_master', name: 'Animal Architect', icon: '🦁', desc: 'Successfully constructed an Animal Cell' },
+            { id: 'speed_demon', name: 'Rush Champ', icon: '⚡', desc: 'Scored 100+ points in Organelle Rush' },
+            { id: 'bio_detective', name: 'Master Bio Detective', icon: '🧩', desc: 'Solved all cell detective quiz cases' }
+        ];
+
+        function renderBadges() {
+            const grid = document.getElementById('badges-grid');
+            grid.innerHTML = '';
+            BADGES_DEF.forEach(badge => {
+                const unlocked = userState.badges.includes(badge.id);
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-xl border flex flex-col items-center text-center transition ${
+                    unlocked 
+                    ? 'bg-slate-800/90 border-amber-500/50 text-white shadow-md' 
+                    : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
+                }`;
+                el.innerHTML = `
+                    <span class="text-2xl mb-1">${unlocked ? badge.icon : '🔒'}</span>
+                    <span class="font-display font-bold text-xs ${unlocked ? 'text-amber-300' : 'text-slate-400'}">${badge.name}</span>
+                    <span class="text-[10px] text-slate-400 mt-1 leading-tight">${badge.desc}</span>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        function switchTab(tabId) {
+            playSound('click');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-lg', 'shadow-emerald-900/40');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+            activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-lg', 'shadow-emerald-900/40');
+
+            if (tabId === 'builder') {
+                initCellBuilder();
+            } else if (tabId === 'quiz') {
+                initQuiz();
+            }
+        }
+
+        function setCellType(type) {
+            playSound('click');
+            userState.cellType = type;
+            const plantBtn = document.getElementById('toggle-plant');
+            const animalBtn = document.getElementById('toggle-animal');
+            const label = document.getElementById('cell-type-label');
+            const icon = document.getElementById('cell-type-icon');
+
+            if (type === 'plant') {
+                plantBtn.className = 'px-4 py-1.5 rounded-lg font-semibold transition-all bg-emerald-500 text-slate-950 font-display';
+                animalBtn.className = 'px-4 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white font-display';
+                label.innerText = 'Plant Cell View';
+                icon.innerText = '🌿';
+            } else {
+                animalBtn.className = 'px-4 py-1.5 rounded-lg font-semibold transition-all bg-blue-500 text-slate-950 font-display';
+                plantBtn.className = 'px-4 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white font-display';
+                label.innerText = 'Animal Cell View';
+                icon.innerText = '🦁';
+            }
+
+            renderCellSVG();
+            selectOrganelle('nucleus');
+        }
+
+        function renderCellSVG() {
+            const svg = document.getElementById('cell-svg');
+            const isPlant = userState.cellType === 'plant';
+
+            if (isPlant) {
+                // PLANT CELL SVG (Rigid polygonal hexagonal wall + chloroplasts + huge vacuole)
+                svg.innerHTML = `
+                    <!-- Plant Cell Wall (Outer Rigid Green Hexagon) -->
+                    <polygon points="70,30 430,30 480,250 430,470 70,470 20,250" 
+                        fill="#064e3b" stroke="#059669" stroke-width="14" rx="20" class="organelle-hover" onclick="selectOrganelle('cellWall')"/>
+                    
+                    <!-- Cell Membrane (Inner Amber Line) -->
+                    <polygon points="78,38 422,38 470,250 422,462 78,462 30,250" 
+                        fill="#0f172a" stroke="#f59e0b" stroke-width="5" class="organelle-hover" onclick="selectOrganelle('cellMembrane')"/>
+                    
+                    <!-- Cytoplasm Background -->
+                    <polygon points="82,42 418,42 464,250 418,458 82,458 36,250" 
+                        fill="#065f46" fill-opacity="0.25" class="organelle-hover" onclick="selectOrganelle('cytoplasm')"/>
+
+                    <!-- Large Central Vacuole (Huge blue reservoir) -->
+                    <path d="M 160 160 Q 280 120 340 180 T 310 320 Q 210 360 150 280 Z" 
+                        fill="#3b82f6" fill-opacity="0.65" stroke="#60a5fa" stroke-width="3" class="organelle-hover pulse-organelle" onclick="selectOrganelle('vacuole')"/>
+                    <text x="220" y="240" fill="#ffffff" font-size="12" font-weight="bold" pointer-events="none" font-family="Fredoka">Central Vacuole</text>
+
+                    <!-- Nucleus (Pink circle offset) -->
+                    <g class="organelle-hover" onclick="selectOrganelle('nucleus')">
+                        <circle cx="360" cy="350" r="48" fill="#ec4899" fill-opacity="0.85" stroke="#f472b6" stroke-width="4"/>
+                        <circle cx="360" cy="350" r="18" fill="#9d174d"/>
+                        <text x="330" y="354" fill="#ffffff" font-size="10" font-weight="bold" pointer-events="none" font-family="Fredoka">Nucleus</text>
+                    </g>
+
+                    <!-- Endoplasmic Reticulum (Around nucleus) -->
+                    <path d="M 320 310 C 290 290, 310 260, 350 280 C 380 260, 420 280, 410 310" 
+                        fill="none" stroke="#f43f5e" stroke-width="7" stroke-linecap="round" class="organelle-hover" onclick="selectOrganelle('endoplasmicReticulum')"/>
+
+                    <!-- Mitochondria (Red ovals with inner folds) -->
+                    <g class="organelle-hover" onclick="selectOrganelle('mitochondria')">
+                        <ellipse cx="120" cy="110" rx="28" ry="16" transform="rotate(-20, 120, 110)" fill="#ef4444" stroke="#fca5a5" stroke-width="2"/>
+                        <path d="M 100 110 Q 120 100 140 110" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    </g>
+                    <g class="organelle-hover" onclick="selectOrganelle('mitochondria')">
+                        <ellipse cx="380" cy="100" rx="26" ry="15" transform="rotate(25, 380, 100)" fill="#ef4444" stroke="#fca5a5" stroke-width="2"/>
+                        <path d="M 365 100 Q 380 95 395 100" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    </g>
+
+                    <!-- Chloroplasts (Distinct plant solar organelles) -->
+                    <g class="organelle-hover" onclick="selectOrganelle('chloroplast')">
+                        <ellipse cx="110" cy="370" rx="32" ry="18" transform="rotate(30, 110, 370)" fill="#10b981" stroke="#a7f3d0" stroke-width="3"/>
+                        <circle cx="102" cy="370" r="3" fill="#ffffff"/>
+                        <circle cx="112" cy="370" r="3" fill="#ffffff"/>
+                        <circle cx="122" cy="370" r="3" fill="#ffffff"/>
+                    </g>
+                    <g class="organelle-hover" onclick="selectOrganelle('chloroplast')">
+                        <ellipse cx="230" cy="400" rx="30" ry="16" transform="rotate(-15, 230, 400)" fill="#10b981" stroke="#a7f3d0" stroke-width="3"/>
+                        <circle cx="222" cy="400" r="3" fill="#ffffff"/>
+                        <circle cx="232" cy="400" r="3" fill="#ffffff"/>
+                    </g>
+
+                    <!-- Golgi Apparatus -->
+                    <path d="M 110 210 Q 140 200 150 220 M 105 220 Q 140 210 155 230 M 112 230 Q 140 220 150 240" 
+                        fill="none" stroke="#d97706" stroke-width="5" stroke-linecap="round" class="organelle-hover" onclick="selectOrganelle('golgiApparatus')"/>
+
+                    <!-- Ribosomes (Dots scattered) -->
+                    <g fill="#c084fc" class="organelle-hover" onclick="selectOrganelle('ribosomes')">
+                        <circle cx="150" cy="90" r="4"/><circle cx="170" cy="110" r="4"/><circle cx="280" cy="90" r="4"/>
+                        <circle cx="300" cy="380" r="4"/><circle cx="420" cy="210" r="4"/>
+                    </g>
+                `;
+            } else {
+                // ANIMAL CELL SVG (Flexible rounded circle/oval outline, smaller vacuoles, lysosomes)
+                svg.innerHTML = `
+                    <!-- Cell Membrane (Outer flexible boundary) -->
+                    <circle cx="250" cy="250" r="220" fill="#0f172a" stroke="#f59e0b" stroke-width="8" class="organelle-hover" onclick="selectOrganelle('cellMembrane')"/>
+                    
+                    <!-- Cytoplasm Gel -->
+                    <circle cx="250" cy="250" r="212" fill="#1e293b" fill-opacity="0.5" class="organelle-hover" onclick="selectOrganelle('cytoplasm')"/>
+
+                    <!-- Centrally located Nucleus -->
+                    <g class="organelle-hover" onclick="selectOrganelle('nucleus')">
+                        <circle cx="250" cy="230" r="60" fill="#ec4899" fill-opacity="0.85" stroke="#f472b6" stroke-width="5"/>
+                        <circle cx="250" cy="230" r="24" fill="#9d174d"/>
+                        <text x="215" y="235" fill="#ffffff" font-size="12" font-weight="bold" pointer-events="none" font-family="Fredoka">Nucleus</text>
+                    </g>
+
+                    <!-- Endoplasmic Reticulum (Surrounding Nucleus) -->
+                    <path d="M 180 200 C 150 170, 160 270, 180 260 M 320 200 C 350 170, 340 270, 320 260" 
+                        fill="none" stroke="#f43f5e" stroke-width="7" stroke-linecap="round" class="organelle-hover" onclick="selectOrganelle('endoplasmicReticulum')"/>
+
+                    <!-- Mitochondria (Multiple powerhouses) -->
+                    <g class="organelle-hover" onclick="selectOrganelle('mitochondria')">
+                        <ellipse cx="140" cy="120" rx="30" ry="18" transform="rotate(-30, 140, 120)" fill="#ef4444" stroke="#fca5a5" stroke-width="2"/>
+                        <path d="M 120 120 Q 140 110 160 120" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    </g>
+                    <g class="organelle-hover" onclick="selectOrganelle('mitochondria')">
+                        <ellipse cx="360" cy="340" rx="30" ry="18" transform="rotate(20, 360, 340)" fill="#ef4444" stroke="#fca5a5" stroke-width="2"/>
+                        <path d="M 340 340 Q 360 330 380 340" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    </g>
+
+                    <!-- Small Animal Vacuoles -->
+                    <circle cx="120" cy="320" r="18" fill="#3b82f6" fill-opacity="0.7" stroke="#93c5fd" stroke-width="2" class="organelle-hover" onclick="selectOrganelle('vacuole')"/>
+                    <circle cx="360" cy="140" r="14" fill="#3b82f6" fill-opacity="0.7" stroke="#93c5fd" stroke-width="2" class="organelle-hover" onclick="selectOrganelle('vacuole')"/>
+
+                    <!-- Lysosomes (Animal Cell Trash Cleanup) -->
+                    <g class="organelle-hover" onclick="selectOrganelle('lysosomes')">
+                        <circle cx="250" cy="380" r="18" fill="#a855f7" stroke="#e9d5ff" stroke-width="2"/>
+                        <text x="243" y="384" fill="#ffffff" font-size="10" font-weight="bold" pointer-events="none">♻️</text>
+                    </g>
+                    <g class="organelle-hover" onclick="selectOrganelle('lysosomes')">
+                        <circle cx="280" cy="110" r="15" fill="#a855f7" stroke="#e9d5ff" stroke-width="2"/>
+                    </g>
+
+                    <!-- Golgi Apparatus -->
+                    <path d="M 180 340 Q 210 330 220 350 M 175 350 Q 210 340 225 360 M 182 360 Q 210 350 220 370" 
+                        fill="none" stroke="#d97706" stroke-width="6" stroke-linecap="round" class="organelle-hover" onclick="selectOrganelle('golgiApparatus')"/>
+
+                    <!-- Ribosomes -->
+                    <g fill="#c084fc" class="organelle-hover" onclick="selectOrganelle('ribosomes')">
+                        <circle cx="200" cy="110" r="4"/><circle cx="220" cy="90" r="4"/>
+                        <circle cx="130" cy="220" r="4"/><circle cx="380" cy="240" r="4"/>
+                    </g>
+                `;
+            }
+        }
+
+        function selectOrganelle(id) {
+            playSound('click');
+            const data = ORGANELLES[id];
+            if (!data) return;
+
+            userState.selectedOrganelle = id;
+
+            document.getElementById('info-icon').innerText = data.icon;
+            document.getElementById('info-title').innerText = data.name;
+            document.getElementById('info-nickname').innerText = data.nickname;
+            document.getElementById('info-analogy').innerText = data.analogy;
+            document.getElementById('info-function').innerText = data.function;
+
+            document.getElementById('info-in-plant').innerText = data.plant ? 'Yes ✅' : 'No ❌';
+            document.getElementById('info-in-plant').className = data.plant ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+            document.getElementById('info-in-animal').innerText = data.animal ? 'Yes ✅' : 'No ❌';
+            document.getElementById('info-in-animal').className = data.animal ? 'font-bold text-blue-400' : 'font-bold text-rose-400';
+
+            unlockBadge('explorer', 'Cell Explorer', '🔍');
+        }
+
+        function resetExplorerSelection() {
+            selectOrganelle('nucleus');
+        }
+
+        function startQuickCheck() {
+            const org = ORGANELLES[userState.selectedOrganelle];
+            const answer = prompt(`QUICK CHECK: What is the main nickname or role of the ${org.name.toUpperCase()}?`);
+            if (answer && answer.trim().length > 0) {
+                addXP(10);
+                playSound('success');
+                alert(`Great effort! Remember: The ${org.name} is "${org.nickname}". (+10 XP)`);
+            }
+        }
+
+        let builderPlaced = [];
+
+        function initCellBuilder() {
+            const targetType = document.getElementById('builder-target-select').value;
+            document.getElementById('builder-type-name').innerText = targetType === 'plant' ? 'Plant Cell' : 'Animal Cell';
+            
+            const canvas = document.getElementById('builder-canvas');
+            canvas.className = `w-full max-w-[420px] aspect-square relative ${targetType === 'plant' ? 'rounded-2xl border-4 border-dashed border-emerald-500/60 bg-emerald-950/20' : 'rounded-full border-4 border-dashed border-amber-500/60 bg-blue-950/20'} flex items-center justify-center p-6 my-2 shadow-inner transition-all`;
+
+            builderPlaced = [];
+            renderBuilderTray();
+            updateBuilderProgress();
+        }
+
+        function renderBuilderTray() {
+            const tray = document.getElementById('organelle-tray');
+            tray.innerHTML = '';
+
+            Object.values(ORGANELLES).forEach(org => {
+                const isPlaced = builderPlaced.includes(org.id);
+                const btn = document.createElement('button');
+                btn.disabled = isPlaced;
+                btn.className = `p-2.5 rounded-xl border flex flex-col items-center justify-center transition text-center ${
+                    isPlaced 
+                    ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed opacity-40' 
+                    : 'bg-slate-800/90 border-slate-700 hover:border-cyan-500 text-white hover:scale-105 active:scale-95'
+                }`;
+                btn.onclick = () => placeOrganelleInBuilder(org.id);
+                btn.innerHTML = `
+                    <span class="text-xl">${org.icon}</span>
+                    <span class="font-display text-xs font-semibold mt-1">${org.name}</span>
+                `;
+                tray.appendChild(btn);
+            });
+        }
+
+        function placeOrganelleInBuilder(id) {
+            const targetType = document.getElementById('builder-target-select').value;
+            const org = ORGANELLES[id];
+
+            // Validate compatibility with grade 7 curriculum
+            if (targetType === 'animal' && !org.animal) {
+                playSound('error');
+                showBuilderFeedback(`⚠️ Hold on! Animal cells do NOT have ${org.name}s. (They get food from eating, not photosynthesis!)`, 'error');
+                return;
+            }
+            if (targetType === 'plant' && !org.plant) {
+                playSound('error');
+                showBuilderFeedback(`⚠️ Wait! Plant cells typically do NOT contain ${org.name}s!`, 'error');
+                return;
+            }
+
+            playSound('success');
+            builderPlaced.push(id);
+            showBuilderFeedback(`✨ Added ${org.name} to your cell assembly!`, 'success');
+            renderBuilderTray();
+            renderBuilderCanvasItems();
+            updateBuilderProgress();
+        }
+
+        function renderBuilderCanvasItems() {
+            const canvas = document.getElementById('builder-canvas');
+            const placeholder = document.getElementById('builder-placeholder-text');
+            
+            // Remove existing placed icon tags
+            canvas.querySelectorAll('.placed-organelle-tag').forEach(e => e.remove());
+
+            if (builderPlaced.length > 0 && placeholder) {
+                placeholder.classList.add('hidden');
+            } else if (placeholder) {
+                placeholder.classList.remove('hidden');
+            }
+
+            builderPlaced.forEach((id, idx) => {
+                const org = ORGANELLES[id];
+                const tag = document.createElement('div');
+                tag.className = 'placed-organelle-tag absolute p-2 rounded-xl bg-slate-800/90 border border-slate-600 text-white font-display text-xs flex items-center gap-1 shadow-lg animate-bounce';
+                
+                // Position organically around canvas
+                const angle = (idx / Math.max(1, builderPlaced.length)) * 2 * Math.PI;
+                const radius = 90 + (idx % 2 * 30);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+
+                tag.style.transform = `translate(${x}px, ${y}px)`;
+                tag.innerHTML = `<span>${org.icon}</span> <span class="text-[10px]">${org.name}</span>`;
+                canvas.appendChild(tag);
+            });
+        }
+
+        function updateBuilderProgress() {
+            const targetType = document.getElementById('builder-target-select').value;
+            const requiredOrganelles = Object.values(ORGANELLES).filter(o => targetType === 'plant' ? o.plant : o.animal);
+            
+            const totalNeeded = requiredOrganelles.length;
+            const placedCount = builderPlaced.length;
+
+            document.getElementById('builder-count').innerText = `Placed: ${placedCount}/${totalNeeded}`;
+            const percentage = Math.min(100, Math.round((placedCount / totalNeeded) * 100));
+            document.getElementById('builder-progress-bar').style.width = `${percentage}%`;
+
+            if (placedCount === totalNeeded) {
+                playSound('win');
+                addXP(50);
+                if (targetType === 'plant') {
+                    unlockBadge('plant_master', 'Plant Architect', '🌿');
+                } else {
+                    unlockBadge('animal_master', 'Animal Architect', '🦁');
+                }
+                showBuilderFeedback(`🎉 CONGRATULATIONS! You constructed a complete living ${targetType.toUpperCase()} cell! (+50 XP)`, 'success');
+            }
+        }
+
+        function showBuilderFeedback(msg, type) {
+            const box = document.getElementById('builder-feedback');
+            box.innerText = msg;
+            box.className = `w-full text-center text-xs sm:text-sm py-2 px-4 rounded-xl font-medium border transition ${
+                type === 'error' ? 'bg-rose-900/60 border-rose-500 text-rose-200' :
+                type === 'success' ? 'bg-emerald-900/60 border-emerald-500 text-emerald-200' :
+                'bg-slate-800/80 border-slate-700 text-slate-300'
+            }`;
+        }
+
+        let rushState = {
+            active: false,
+            score: 0,
+            streak: 0,
+            timeLeft: 30,
+            timerId: null,
+            currentCorrect: null
+        };
+
+        function startRushGame() {
+            playSound('click');
+            rushState = {
+                active: true,
+                score: 0,
+                streak: 0,
+                timeLeft: 30,
+                timerId: null,
+                currentCorrect: null
+            };
+
+            document.getElementById('rush-start-screen').classList.add('hidden');
+            document.getElementById('rush-hud').classList.remove('hidden');
+            document.getElementById('rush-game-area').classList.remove('hidden');
+
+            updateRushHUD();
+            nextRushPrompt();
+
+            rushState.timerId = setInterval(() => {
+                rushState.timeLeft--;
+                updateRushHUD();
+                if (rushState.timeLeft <= 0) {
+                    endRushGame();
+                }
+            }, 1000);
+        }
+
+        function updateRushHUD() {
+            document.getElementById('rush-timer').innerText = `${rushState.timeLeft}s`;
+            document.getElementById('rush-score').innerText = rushState.score;
+            document.getElementById('rush-streak').innerText = `${rushState.streak}x`;
+        }
+
+        function nextRushPrompt() {
+            const keys = Object.keys(ORGANELLES);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            const correctOrg = ORGANELLES[randomKey];
+            rushState.currentCorrect = correctOrg;
+
+            document.getElementById('rush-prompt-text').innerText = `"${correctOrg.nickname}"`;
+
+            // Prepare 4 choices
+            const choices = [correctOrg];
+            while (choices.length < 4) {
+                const k = keys[Math.floor(Math.random() * keys.length)];
+                if (!choices.find(c => c.id === k)) {
+                    choices.push(ORGANELLES[k]);
+                }
+            }
+            // Shuffle
+            choices.sort(() => Math.random() - 0.5);
+
+            const grid = document.getElementById('rush-options-grid');
+            grid.innerHTML = '';
+            choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'p-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-display text-sm text-white font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-md';
+                btn.onclick = () => answerRush(c.id);
+                btn.innerHTML = `<span>${c.icon}</span> <span>${c.name}</span>`;
+                grid.appendChild(btn);
+            });
+        }
+
+        function answerRush(selectedId) {
+            if (!rushState.active) return;
+
+            if (selectedId === rushState.currentCorrect.id) {
+                playSound('success');
+                rushState.streak++;
+                const gained = 10 * rushState.streak;
+                rushState.score += gained;
+                addXP(gained);
+            } else {
+                playSound('error');
+                rushState.streak = 0;
+            }
+
+            if (rushState.score >= 100) {
+                unlockBadge('speed_demon', 'Rush Champ', '⚡');
+            }
+
+            updateRushHUD();
+            nextRushPrompt();
+        }
+
+        function endRushGame() {
+            clearInterval(rushState.timerId);
+            rushState.active = false;
+            playSound('win');
+
+            document.getElementById('rush-prompt-text').innerText = `🎉 TIME'S UP! Final Score: ${rushState.score} PTS!`;
+            document.getElementById('rush-options-grid').innerHTML = `
+                <button onclick="startRushGame()" class="col-span-2 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-bold text-base rounded-xl transition">
+                    🔄 Play Again!
+                </button>
+            `;
+        }
+
+        const QUIZ_QUESTIONS = [
+            {
+                scenario: "A wilted plant stem is drooping because it ran out of stored water inside its cells! Which organelle lost its water pressure?",
+                options: ["Mitochondria", "Central Vacuole", "Cell Wall", "Ribosomes"],
+                correct: 1,
+                explanation: "The Central Vacuole stores water and maintains turgor pressure in plant cells. When low on water, plants droop!"
+            },
+            {
+                scenario: "A muscular cell requires massive amounts of immediate ATP energy to flex and move. Which organelle will you find in super high amounts here?",
+                options: ["Nucleus", "Lysosomes", "Mitochondria", "Chloroplast"],
+                correct: 2,
+                explanation: "Mitochondria burn nutrients to produce ATP energy—muscles need tons of them!"
+            },
+            {
+                scenario: "A cell needs to assemble thousands of new structural proteins. Where does protein synthesis occur?",
+                options: ["Ribosomes", "Cell Membrane", "Golgi Apparatus", "Vacuole"],
+                correct: 0,
+                explanation: "Ribosomes are the protein-building machinery of all cells!"
+            },
+            {
+                scenario: "Scientists discover a mystery cell with a strong outer Cell Wall and green Chloroplasts. What cell type is this?",
+                options: ["Animal Cell", "Plant Cell", "Bacterial Spore", "Human Muscle Cell"],
+                correct: 1,
+                explanation: "Cell Walls and Chloroplasts are key distinctive features of Plant Cells!"
+            },
+            {
+                scenario: "A cell needs to package finished proteins into vesicles and ship them out to other tissues. Which organelle acts as this Post Office?",
+                options: ["Nucleus", "Golgi Apparatus", "Lysosome", "Cytoplasm"],
+                correct: 1,
+                explanation: "The Golgi Apparatus packages, labels, and ships cellular products like a post office!"
+            }
+        ];
+
+        let quizIndex = 0;
+
+        function initQuiz() {
+            quizIndex = 0;
+            renderQuizCard();
+        }
+
+        function renderQuizCard() {
+            const q = QUIZ_QUESTIONS[quizIndex];
+            document.getElementById('quiz-progress-text').innerText = `Case ${quizIndex + 1} of ${QUIZ_QUESTIONS.length}`;
+            document.getElementById('quiz-question').innerText = q.scenario;
+            
+            document.getElementById('quiz-explanation').classList.add('hidden');
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+
+            const optionsBox = document.getElementById('quiz-options');
+            optionsBox.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-opt-btn w-full p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-left font-medium text-sm text-slate-200 transition flex items-center justify-between';
+                btn.onclick = () => checkQuizAnswer(idx);
+                btn.innerHTML = `<span>${opt}</span> <span class="text-xs text-slate-400">Select ➔</span>`;
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        function checkQuizAnswer(selectedIdx) {
+            const q = QUIZ_QUESTIONS[quizIndex];
+            const isCorrect = selectedIdx === q.correct;
+
+            // Disable option buttons
+            document.querySelectorAll('.quiz-opt-btn').forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.correct) {
+                    btn.className = 'w-full p-3 bg-emerald-900/80 border border-emerald-500 rounded-xl text-left font-medium text-sm text-emerald-200';
+                } else if (idx === selectedIdx) {
+                    btn.className = 'w-full p-3 bg-rose-900/80 border border-rose-500 rounded-xl text-left font-medium text-sm text-rose-200';
+                }
+            });
+
+            const expBox = document.getElementById('quiz-explanation');
+            const title = document.getElementById('quiz-result-title');
+            const text = document.getElementById('quiz-result-text');
+
+            expBox.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSound('success');
+                addXP(20);
+                title.innerText = "✅ CASE SOLVED CORRECTLY! (+20 XP)";
+                title.className = "font-bold mb-1 font-display text-emerald-400";
+            } else {
+                playSound('error');
+                title.innerText = "❌ CASE MISMATCH!";
+                title.className = "font-bold mb-1 font-display text-rose-400";
+            }
+
+            text.innerText = q.explanation;
+            document.getElementById('quiz-next-btn').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            quizIndex++;
+            if (quizIndex < QUIZ_QUESTIONS.length) {
+                renderQuizCard();
+            } else {
+                playSound('win');
+                unlockBadge('bio_detective', 'Master Bio Detective', '🧩');
+                document.getElementById('quiz-card').innerHTML = `
+                    <div class="text-center py-8 space-y-3">
+                        <span class="text-5xl">🎉</span>
+                        <h3 class="font-display text-2xl font-bold text-amber-400">All Cell Cases Solved!</h3>
+                        <p class="text-sm text-slate-300">You've mastered Grade 7 cell organelle structure and function!</p>
+                        <button onclick="initQuiz()" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-display font-semibold rounded-xl text-sm transition">
+                            🔄 Replay Quiz
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        window.onload = function() {
+            loadState();
+            setCellType('plant');
+        };
+    </script>
+</body>
+</html>
